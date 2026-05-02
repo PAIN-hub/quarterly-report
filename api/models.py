@@ -4,7 +4,7 @@ Includes User, Report, AuditLog, Backup models with full audit trail support.
 """
 
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
 from django.db.models import JSONField
 import uuid
@@ -31,7 +31,7 @@ class UserManager(BaseUserManager):
         """Create and save a superuser."""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', 'ADMIN')
+        extra_fields.setdefault('role', 'SYSTEM_ADMIN')
         
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
@@ -41,7 +41,7 @@ class UserManager(BaseUserManager):
         return self.create_user(access_id, password, **extra_fields)
 
 
-class User(AbstractBaseUser):
+class User(AbstractBaseUser, PermissionsMixin):
     """
     Custom user model with Access ID authentication and role-based access control.
     """
