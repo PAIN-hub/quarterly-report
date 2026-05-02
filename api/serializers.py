@@ -21,8 +21,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Change the username field label
+        if 'username' in self.fields:
+         del self.fields['username']
+         
         self.fields[self.username_field] = serializers.CharField()
-        del self.fields['username']
     
     @classmethod
     def get_token(cls, user):
