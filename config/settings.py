@@ -6,6 +6,8 @@ from datetime import timedelta
 from decouple import config
 import dj_database_url
 
+from django.template.context import RenderContext
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ========================
@@ -214,3 +216,11 @@ LOGGING = {
 # ========================
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+def fixed_copy(self):
+    duplicate = RenderContext()
+    duplicate.dicts = self.dicts[:]
+    return duplicate
+
+RenderContext.__copy__ = fixed_copy
+
