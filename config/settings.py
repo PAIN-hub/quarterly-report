@@ -6,13 +6,11 @@ from datetime import timedelta
 from decouple import config
 import dj_database_url
 
-from django.template.context import RenderContext
+# ========================
+# Core Setup
+# ========================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# ========================
-# CORE SECURITY
-# ========================
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
@@ -28,7 +26,7 @@ ALLOWED_HOSTS = [
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # ========================
-# APPLICATIONS
+# Applications
 # ========================
 
 INSTALLED_APPS = [
@@ -48,35 +46,30 @@ INSTALLED_APPS = [
 ]
 
 # ========================
-# MIDDLEWARE
+# Middleware
 # ========================
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-
+    
     # Whitenoise MUST be right after security
     'whitenoise.middleware.WhiteNoiseMiddleware',
-
+    
     'corsheaders.middleware.CorsMiddleware',
-
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# ========================
-# TEMPLATES
-# ========================
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'], # Ensure this directory exists in your root/project path
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -89,43 +82,54 @@ TEMPLATES = [
     },
 ]
 
-# ========================
-# URL / WSGI
-# ========================
-
-ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # ========================
-# DATABASE
+# Database
 # ========================
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL')
+        default='sqlite:///db.sqlite3',
+        conn_max_age=600
     )
 }
 
-if not DEBUG and 'sqlite3' in DATABASES['default']['ENGINE']:
-    raise Exception("SQLite not allowed in production")
-
-# ========================
-# STATIC FILES
-# ========================
-
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# ========================
-# CUSTOM USER
-# ========================
+# Password validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
 
 AUTH_USER_MODEL = 'api.User'
 
 # ========================
-# REST FRAMEWORK
+# Internationalization
+# ========================
+
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'Africa/Lagos'
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ========================
+# Rest Framework & Auth
 # ========================
 
 REST_FRAMEWORK = {
@@ -135,11 +139,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
 }
-
-# ========================
-# JWT
-# ========================
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
@@ -166,16 +169,12 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# ========================
-# CSRF
-# ========================
-
 CSRF_TRUSTED_ORIGINS = [
     "https://*.onrender.com",
 ]
 
 # ========================
-# SECURITY HEADERS
+# Security Headers
 # ========================
 
 SECURE_SSL_REDIRECT = not DEBUG
@@ -194,7 +193,7 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
 # ========================
-# LOGGING (Render-friendly)
+# Logging
 # ========================
 
 LOGGING = {
@@ -212,15 +211,26 @@ LOGGING = {
 }
 
 # ========================
-# DEFAULTS
+# Python 3.14 Compatibility Patch
 # ========================
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+import copy
+from django.template.context import Context, RenderContext
 
-def fixed_copy(self):
-    duplicate = RenderContext()
+def fixed_context_copy(self):
+    duplicate = Context()
+    duplicate.__class__ = self.__class__
+    duplicate.__dict__ = copy.copy(self.__dict__)
     duplicate.dicts = self.dicts[:]
     return duplicate
 
-RenderContext.__copy__ = fixed_copy
+Context.__copy__ = fixed_context_copy
 
+def fixed_render_context_copy(self):
+    duplicate = RenderContext()
+    duplicate.__class__ = self.__class__
+    duplicate.__dict__ = copy.copy(self.__dict__)
+    duplicate.dicts = self.dicts[:]
+    return duplicate
+
+RenderContext.__copy__ = fixed_render_context_copy
